@@ -33,28 +33,28 @@ void Afficher(SDL_Surface* screen,SDL_Surface* tileset,Terrain table,int nombre_
 
 int main(int argc,char** argv)
 {
-    Terrain t;
+	Terrain t;
 
-    t = std::vector<std::vector<int> >(40);
+	t = std::vector<std::vector<int> >(40);
 
-    for(int i=0; i<t.size(); ++i)
-        t[i] = std::vector<int>(40);
+   	for(int i=0; i<t.size(); ++i)
+       		t[i] = std::vector<int>(40);
 
-    for(int i=0; i<t.size(); ++i)
-    {
-        for(int j=0; j<t[i].size(); ++j)
-        {
-            t[i][j] = 0; // On initialise le terrain avec de l'herbe
-        }
-    }
+    	for(int i=0; i<t.size(); ++i)
+    	{
+        	for(int j=0; j<t[i].size(); ++j)
+        	{
+            		t[i][j] = 0; // On initialise le terrain avec de l'herbe
+        	}
+    	}
 
-    // Test d'ajout d'éléments sur le terrain (termite, brindille, herbe)
-    t[1][1] = 1;
-    t[34][16] = 1;
-    t[32][5] = 2;
-    t[9][24] = 1;
-    t[18][17] = 2;
-    t[30][20] = 1;
+    	// Test d'ajout d'éléments sur le terrain (termite, brindille, herbe)
+	t[1][1] = 1;
+    	t[34][16] = 1;
+    	t[32][5] = 2;
+    	t[9][24] = 1;
+    	t[18][17] = 2;
+    	t[30][20] = 1;
 
 	SDL_Surface* screen,*tileset;
 	SDL_Event event;
@@ -64,7 +64,7 @@ int main(int argc,char** argv)
 
 	Afficher(screen,tileset,t,NOMBRE_BLOCS_LARGEUR,NOMBRE_BLOCS_HAUTEUR);
 
-    // garde le programme ouvert tant que l'utilisateur n'appuie pas sur une touche (pour les tests)
+	 // garde le programme ouvert tant que l'utilisateur n'appuie pas sur une touche (pour les tests)
 	do
 	{
 		SDL_WaitEvent(&event);
