@@ -105,32 +105,6 @@ void InitialiseTerrain()
     }
 }
 
-void afficheTerrain()
-{
-    for(int i=0; i<40; ++i)
-    {
-        for(int j=0; j<40; ++j)
-        {
-            if(Terrain[i][j].brindille)
-                cout << "0";
-            else if(Terrain[i][j].termite != -1)
-            {
-                if(TableauTermites[Terrain[i][j].termite].dir == 0 || TableauTermites[Terrain[i][j].termite].dir == 4)
-                    cout << "-";
-                else if(TableauTermites[Terrain[i][j].termite].dir == 2 || TableauTermites[Terrain[i][j].termite].dir == 6)
-                    cout << "I";
-                else if(TableauTermites[Terrain[i][j].termite].dir == 3 || TableauTermites[Terrain[i][j].termite].dir == 7)
-                    cout << "\\";
-                else if(TableauTermites[Terrain[i][j].termite].dir == 1 || TableauTermites[Terrain[i][j].termite].dir == 5)
-                    cout << "/";
-            }
-            else
-                cout << " ";
-        }
-        cout << endl;
-    }
-}
-
 void Afficher(SDL_Surface* screen,SDL_Surface* tileset,int nombre_blocs_largeur,int nombre_blocs_hauteur)
 {
 	int i,j;
@@ -148,11 +122,11 @@ void Afficher(SDL_Surface* screen,SDL_Surface* tileset,int nombre_blocs_largeur,
 			Rect_dest.y = j*HAUTEUR_TILE;
 
 			if(Terrain[i][j].brindille)
-                Rect_source.x = 1*LARGEUR_TILE;
-            else if(Terrain[i][j].termite != -1)
-                Rect_source.x = 2*LARGEUR_TILE;
-            else
-                Rect_source.x = 0;
+                		Rect_source.x = 1*LARGEUR_TILE;
+            		else if(Terrain[i][j].termite != -1)
+                		Rect_source.x = 2*LARGEUR_TILE;
+            		else
+                		Rect_source.x = 0;
 
 			Rect_source.y = 0;
 			SDL_BlitSurface(tileset,&Rect_source,screen,&Rect_dest);
@@ -163,7 +137,7 @@ void Afficher(SDL_Surface* screen,SDL_Surface* tileset,int nombre_blocs_largeur,
 
 int main(int argc,char** argv)
 {
-    srand (time(NULL));
+    	srand (time(NULL));
 
 	SDL_Surface* screen,*tileset;
 	SDL_Event event;
@@ -171,10 +145,10 @@ int main(int argc,char** argv)
 	screen = SDL_SetVideoMode(LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR, HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR, 32,SDL_HWSURFACE|SDL_DOUBLEBUF);
 	tileset = SDL_LoadBMP("tileset1.bmp");
 
-    InitialiseTerrain();
+	InitialiseTerrain();
 	Afficher(screen,tileset,NOMBRE_BLOCS_LARGEUR,NOMBRE_BLOCS_HAUTEUR);
 
-    // garde le programme ouvert tant que l'utilisateur n'appuie pas sur une touche (pour les tests)
+	 // garde le programme ouvert tant que l'utilisateur n'appuie pas sur une touche (pour les tests)
 	do
 	{
 		SDL_WaitEvent(&event);
