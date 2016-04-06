@@ -1,5 +1,8 @@
 #include <SDL/SDL.h>
 #include <vector>
+#include <iostream>
+#include <stdlib.h>
+#include <time.h>
 
 #define LARGEUR_TILE 15  // hauteur et largeur des tiles.
 #define HAUTEUR_TILE 15
@@ -7,9 +10,128 @@
 #define NOMBRE_BLOCS_LARGEUR 40  // nombre a afficher en x et y
 #define NOMBRE_BLOCS_HAUTEUR 40
 
-typedef std::vector<std::vector<int> > Terrain;
+using namespace std;
 
-void Afficher(SDL_Surface* screen,SDL_Surface* tileset,Terrain table,int nombre_blocs_largeur,int nombre_blocs_hauteur)
+struct coord
+{
+    float x;
+    float y;
+};
+
+struct place
+{
+    coord c;
+    bool brindille;
+    int termite;
+};
+
+struct termite
+{
+    coord c;
+    int indT;
+    int dir;
+};
+
+// constructeur coord début
+coord NouvelleCoord(float x, float y)
+{
+    coord result;
+
+    result.x = x;
+    result.y = y;
+
+    return result;
+}
+// fin
+
+// constructeur place début
+void PlaceVide(place &p)
+{
+    p.brindille = false;
+    p.termite = -1;
+}
+
+void PoserBrindille(place &p)
+{
+    p.brindille = true;
+}
+
+void PoserTermite(place &p, int indT)
+{
+    p.termite = indT;
+}
+// fin
+
+place Terrain[40][40];
+
+int nbTermites = 0;
+
+termite TableauTermites[16];
+
+//constructeur termite début
+void InitTermite(termite &t, int x, int y, int indT)
+{
+    t.c = NouvelleCoord(x,y);
+    t.indT = indT;
+    t.dir = rand() % 8;
+}
+
+bool proba(float p)
+{
+    int random = rand() % 100;
+
+    if(random <= p*100)
+        return true;
+    else
+        return false;
+}
+
+void InitialiseTerrain()
+{
+    for(int i=0; i<40; ++i)
+    {
+        for(int j=0; j<40; ++j)
+        {
+            PlaceVide(Terrain[i][j]);
+            if(proba(0.05))
+                PoserBrindille(Terrain[i][j]);
+            else if(proba(0.01))
+            {
+                InitTermite(TableauTermites[nbTermites], i, j, nbTermites);
+                PoserTermite(Terrain[i][j], nbTermites);
+                ++nbTermites;
+            }
+        }
+    }
+}
+
+void afficheTerrain()
+{
+    for(int i=0; i<40; ++i)
+    {
+        for(int j=0; j<40; ++j)
+        {
+            if(Terrain[i][j].brindille)
+                cout << "0";
+            else if(Terrain[i][j].termite != -1)
+            {
+                if(TableauTermites[Terrain[i][j].termite].dir == 0 || TableauTermites[Terrain[i][j].termite].dir == 4)
+                    cout << "-";
+                else if(TableauTermites[Terrain[i][j].termite].dir == 2 || TableauTermites[Terrain[i][j].termite].dir == 6)
+                    cout << "I";
+                else if(TableauTermites[Terrain[i][j].termite].dir == 3 || TableauTermites[Terrain[i][j].termite].dir == 7)
+                    cout << "\\";
+                else if(TableauTermites[Terrain[i][j].termite].dir == 1 || TableauTermites[Terrain[i][j].termite].dir == 5)
+                    cout << "/";
+            }
+            else
+                cout << " ";
+        }
+        cout << endl;
+    }
+}
+
+void Afficher(SDL_Surface* screen,SDL_Surface* tileset,int nombre_blocs_largeur,int nombre_blocs_hauteur)
 {
 	int i,j;
 	SDL_Rect Rect_dest;
@@ -21,9 +143,17 @@ void Afficher(SDL_Surface* screen,SDL_Surface* tileset,Terrain table,int nombre_
 	{
 		for(j=0;j<nombre_blocs_hauteur;j++)
 		{
+
 			Rect_dest.x = i*LARGEUR_TILE;
 			Rect_dest.y = j*HAUTEUR_TILE;
-			Rect_source.x = (table[j][i])*LARGEUR_TILE;
+
+			if(Terrain[i][j].brindille)
+                Rect_source.x = 1*LARGEUR_TILE;
+            else if(Terrain[i][j].termite != -1)
+                Rect_source.x = 2*LARGEUR_TILE;
+            else
+                Rect_source.x = 0;
+
 			Rect_source.y = 0;
 			SDL_BlitSurface(tileset,&Rect_source,screen,&Rect_dest);
 		}
@@ -33,28 +163,7 @@ void Afficher(SDL_Surface* screen,SDL_Surface* tileset,Terrain table,int nombre_
 
 int main(int argc,char** argv)
 {
-	Terrain t;
-
-	t = std::vector<std::vector<int> >(40);
-
-   	for(int i=0; i<t.size(); ++i)
-       		t[i] = std::vector<int>(40);
-
-    	for(int i=0; i<t.size(); ++i)
-    	{
-        	for(int j=0; j<t[i].size(); ++j)
-        	{
-            		t[i][j] = 0; // On initialise le terrain avec de l'herbe
-        	}
-    	}
-
-    	// Test d'ajout d'éléments sur le terrain (termite, brindille, herbe)
-	t[1][1] = 1;
-    	t[34][16] = 1;
-    	t[32][5] = 2;
-    	t[9][24] = 1;
-    	t[18][17] = 2;
-    	t[30][20] = 1;
+    srand (time(NULL));
 
 	SDL_Surface* screen,*tileset;
 	SDL_Event event;
@@ -62,9 +171,10 @@ int main(int argc,char** argv)
 	screen = SDL_SetVideoMode(LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR, HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR, 32,SDL_HWSURFACE|SDL_DOUBLEBUF);
 	tileset = SDL_LoadBMP("tileset1.bmp");
 
-	Afficher(screen,tileset,t,NOMBRE_BLOCS_LARGEUR,NOMBRE_BLOCS_HAUTEUR);
+    InitialiseTerrain();
+	Afficher(screen,tileset,NOMBRE_BLOCS_LARGEUR,NOMBRE_BLOCS_HAUTEUR);
 
-	 // garde le programme ouvert tant que l'utilisateur n'appuie pas sur une touche (pour les tests)
+    // garde le programme ouvert tant que l'utilisateur n'appuie pas sur une touche (pour les tests)
 	do
 	{
 		SDL_WaitEvent(&event);
