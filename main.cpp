@@ -3,6 +3,8 @@
 #include <iostream>
 #include <stdlib.h>
 #include <time.h>
+#include <SDL_ttf.h>
+#include "termite.h"
 
 #define LARGEUR_TILE 15  // hauteur et largeur des tiles.
 #define HAUTEUR_TILE 15
@@ -12,149 +14,139 @@
 
 using namespace std;
 
-struct coord
-{
-    float x;
-    float y;
-};
-
-struct place
-{
-    coord c;
-    bool brindille;
-    int termite;
-};
-
-struct termite
-{
-    coord c;
-    int indT;
-    int dir;
-};
-
-// constructeur coord début
-coord NouvelleCoord(float x, float y)
-{
-    coord result;
-
-    result.x = x;
-    result.y = y;
-
-    return result;
-}
-// fin
-
-// constructeur place début
-void PlaceVide(place &p)
-{
-    p.brindille = false;
-    p.termite = -1;
-}
-
-void PoserBrindille(place &p)
-{
-    p.brindille = true;
-}
-
-void PoserTermite(place &p, int indT)
-{
-    p.termite = indT;
-}
-// fin
-
-place Terrain[40][40];
-
-int nbTermites = 0;
-
-termite TableauTermites[16];
-
-//constructeur termite début
-void InitTermite(termite &t, int x, int y, int indT)
-{
-    t.c = NouvelleCoord(x,y);
-    t.indT = indT;
-    t.dir = rand() % 8;
-}
-
-bool proba(float p)
-{
-    int random = rand() % 100;
-
-    if(random <= p*100)
-        return true;
-    else
-        return false;
-}
-
-void InitialiseTerrain()
-{
-    for(int i=0; i<40; ++i)
-    {
-        for(int j=0; j<40; ++j)
-        {
-            PlaceVide(Terrain[i][j]);
-            if(proba(0.05))
-                PoserBrindille(Terrain[i][j]);
-            else if(proba(0.01))
-            {
-                InitTermite(TableauTermites[nbTermites], i, j, nbTermites);
-                PoserTermite(Terrain[i][j], nbTermites);
-                ++nbTermites;
-            }
-        }
-    }
-}
-
-void Afficher(SDL_Surface* screen,SDL_Surface* tileset,int nombre_blocs_largeur,int nombre_blocs_hauteur)
-{
-	int i,j;
-	SDL_Rect Rect_dest;
-	SDL_Rect Rect_source;
-	Rect_source.w = LARGEUR_TILE;
-	Rect_source.h = HAUTEUR_TILE;
-
-	for(i=0;i<nombre_blocs_largeur;i++)
-	{
-		for(j=0;j<nombre_blocs_hauteur;j++)
-		{
-
-			Rect_dest.x = i*LARGEUR_TILE;
-			Rect_dest.y = j*HAUTEUR_TILE;
-
-			if(Terrain[i][j].brindille)
-                		Rect_source.x = 1*LARGEUR_TILE;
-            		else if(Terrain[i][j].termite != -1)
-                		Rect_source.x = 2*LARGEUR_TILE;
-            		else
-                		Rect_source.x = 0;
-
-			Rect_source.y = 0;
-			SDL_BlitSurface(tileset,&Rect_source,screen,&Rect_dest);
-		}
-	}
-	SDL_Flip(screen);
-}
-
 int main(int argc,char** argv)
 {
-    	srand (time(NULL));
+    srand (time(NULL));
 
-	SDL_Surface* screen,*tileset;
+    int nbPasse = 0; //Compteur de passe
+    bool pause = true;
+    int StartPauseTicks = 0; //Nombre de tick au début de la pause
+    int PauseTicks = 0; //Nombre de tick de la pause
+    int Ticks = 0; //Nombre de ticks moins le nombre de tick de la pause
+    bool done = false;
+	bool pression = false;
+
+	SDL_Surface* screen, *tileset; // Déclaration des surfaces
 	SDL_Event event;
-	SDL_Init(SDL_INIT_VIDEO);		// prepare SDL
-	screen = SDL_SetVideoMode(LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR, HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR, 32,SDL_HWSURFACE|SDL_DOUBLEBUF);
+	TTF_Font *police = NULL; //Déclaration de la police pour le texte
+	SDL_Surface *passe = NULL; //Déclaration d'une surface pour le nombre de passe
+	SDL_Surface *temps = NULL; //Déclaration d'une surface pour le temps
+	SDL_Surface *texte1 = NULL; //Déclaration d'une surface pour le texte 1
+	SDL_Surface *texte2 = NULL; //Déclaration d'une surface pour le texte 2
+	SDL_Color couleur = {0, 0, 0}; //Couleur du texte
+	SDL_Init(SDL_INIT_VIDEO); // Chargement de la SDL
+	TTF_Init(); //Chargement de la bibliothèque pour le texte
+	char passeChar[10];
+	char tempsChar[10];
+	screen = SDL_SetVideoMode(LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR + 200, HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR, 32,SDL_HWSURFACE|SDL_DOUBLEBUF);
+
+	//Chargement du tileset
 	tileset = SDL_LoadBMP("tileset1.bmp");
 
-	InitialiseTerrain();
-	Afficher(screen,tileset,NOMBRE_BLOCS_LARGEUR,NOMBRE_BLOCS_HAUTEUR);
+    //Chargement de la police
+	police = TTF_OpenFont("LemonMilk.otf", 15);
 
-	 // garde le programme ouvert tant que l'utilisateur n'appuie pas sur une touche (pour les tests)
-	do
-	{
-		SDL_WaitEvent(&event);
-	} while (event.type!=SDL_KEYDOWN);
+    //Titre de la fenêtre
+	SDL_WM_SetCaption("Termite Simulator", NULL);
 
-	SDL_FreeSurface(tileset);
+	texte1 = TTF_RenderText_Blended(police, "Nombre de passes :", couleur);
+	texte2 = TTF_RenderText_Blended(police, "Temps (seconde) :", couleur);
+
+    //position du texte 2
+    SDL_Rect tposition1;
+    tposition1.x = LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR + 20;
+    tposition1.y = HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR - 180;
+
+    //position du texte 2
+    SDL_Rect tposition2;
+    tposition2.x = LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR + 20;
+    tposition2.y = HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR - 480;
+
+	//position du texte de temps
+    SDL_Rect position1;
+    position1.x = LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR + 50;
+    position1.y = HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR - 160;
+
+    //position du texte de nombre de passe
+    SDL_Rect position2;
+    position2.x = LARGEUR_TILE*NOMBRE_BLOCS_LARGEUR + 50;
+    position2.y = HAUTEUR_TILE*NOMBRE_BLOCS_HAUTEUR - 460;
+
+    InitialiseTerrain();
+	afficheTerrain(screen,tileset,NOMBRE_BLOCS_LARGEUR,NOMBRE_BLOCS_HAUTEUR);
+
+	while(!done)
+    {
+        while(SDL_PollEvent(&event))
+        {
+            switch(event.type)
+            {
+                //Gestion du clavier
+                case SDL_KEYDOWN:
+                {
+                    switch(event.key.keysym.sym)
+                    {
+                        case SDLK_RETURN: // Entrée
+                            StartPauseTicks = SDL_GetTicks();
+                            PauseTicks = Ticks;
+                            MouvTermite();
+                            ++nbPasse;
+                            Ticks = PauseTicks + SDL_GetTicks() - StartPauseTicks;
+                            pause = true;
+                        break;
+
+                        case SDLK_SPACE: // Espace
+                            if(pression)
+                            {
+                                pression = false;
+                                pause = true;
+                                PauseTicks = Ticks;
+                            }
+                            else
+                            {
+                                pression = true;
+                                StartPauseTicks = SDL_GetTicks();
+                            }
+                        break;
+
+                        case SDLK_ESCAPE: // Echap
+                            done = true;
+                        break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+
+
+        if(pression)
+        {
+            pause = false;
+            MouvTermite();
+            ++nbPasse;
+        }
+
+        if(!pause)
+            Ticks = PauseTicks + SDL_GetTicks() - StartPauseTicks;
+
+        sprintf(tempsChar, "%d", Ticks/1000);
+        sprintf(passeChar, "%d", nbPasse);
+        temps = TTF_RenderText_Blended(police, tempsChar, couleur);
+        passe = TTF_RenderText_Blended(police, passeChar, couleur);
+
+        SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 239, 228, 176));
+        SDL_BlitSurface(temps, NULL, screen, &position1);
+        SDL_BlitSurface(texte1, NULL, screen, &tposition2);
+        SDL_BlitSurface(texte2, NULL, screen, &tposition1);
+        SDL_BlitSurface(passe, NULL, screen, &position2);
+        afficheTerrain(screen,tileset,NOMBRE_BLOCS_LARGEUR,NOMBRE_BLOCS_HAUTEUR);
+        SDL_Flip(screen); //Rechargement de l'écran
+
+    }
+
+	SDL_FreeSurface(screen);
 	SDL_Quit();
 	return 0;
 }
